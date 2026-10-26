@@ -1,47 +1,77 @@
+import { useAccount, useChainId, useConnect, useConnectors, useDisconnect, useSwitchChain } from 'wagmi';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { ORBIX_CHAIN } from '../web3/config.js';
+import { friendlyTxError } from '../web3/useContractTx.js';
 
-// Real wallet connection via EIP-1193 (window.ethereum). Nothing is signed or sent by this app.
 const WalletContext = createContext(null);
 
 export function WalletProvider({ children }) {
-  const [account, setAccount] = useState(null);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
+  const { address, isConnected, connector } = useAccount();
+  const chainId = useChainId();
+  const configured = useConnectors();
+  const { connect, isPending: connecting, error: connectError, reset: resetConnect } = useConnect();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
+  const { switchChain, isPending: switching, error: switchError } = useSwitchChain();
   const [modalOpen, setModalOpen] = useState(false);
+  const [notice, setNotice] = useState('');
 
+  const wrongNetwork = isConnected && chainId !== ORBIX_CHAIN.id;
   const hasInjected = typeof window !== 'undefined' && !!window.ethereum;
 
+  // Close the modal once a wallet is connected on Sepolia.
   useEffect(() => {
-    const eth = window.ethereum;
-    if (!eth || !eth.on) return;
-    const onChange = (accounts) => setAccount(accounts && accounts[0] ? accounts[0] : null);
-    eth.on('accountsChanged', onChange);
-    return () => eth.removeListener && eth.removeListener('accountsChanged', onChange);
-  }, []);
+    if (isConnected && !wrongNetwork) setModalOpen(false);
+  }, [isConnected, wrongNetwork]);
 
-  const connectInjected = useCallback(async () => {
-    setError('');
-    if (!window.ethereum) {
-      setError('No browser wallet found. Install MetaMask, Rabby or Coinbase Wallet, then try again.');
-      return;
+  // Tell the user when the connected account or network changes underneath them.
+  useEffect(() => {
+    if (!isConnected) return;
+    if (wrongNetwork) {
+      setNotice('Your wallet is on an unsupported network. Orbix only works on Ethereum Sepolia.');
+    } else {
+      setNotice('');
     }
-    setBusy(true);
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      setAccount(accounts[0] || null);
-      setModalOpen(false);
-    } catch (e) {
-      setError(e && e.message ? e.message : 'Connection request was rejected.');
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  }, [isConnected, wrongNetwork, address, chainId]);
 
-  const disconnect = useCallback(() => setAccount(null), []);
+  const connectError2 = connectError ? friendlyTxError(connectError) : '';
+  const error = connectError2 || (switchError ? friendlyTxError(switchError) : '') || '';
+
+  const connectWith = useCallback(
+    (connector) => {
+      resetConnect();
+      setNotice('');
+      connect({ connector, chainId: ORBIX_CHAIN.id });
+    },
+    [connect, resetConnect]
+  );
+
+  const disconnect = useCallback(() => {
+    wagmiDisconnect();
+    setNotice('');
+  }, [wagmiDisconnect]);
+
+  const switchToSepolia = useCallback(() => {
+    switchChain({ chainId: ORBIX_CHAIN.id });
+  }, [switchChain]);
 
   const value = useMemo(
-    () => ({ account, error, busy, hasInjected, modalOpen, setModalOpen, connectInjected, disconnect }),
-    [account, error, busy, hasInjected, modalOpen, connectInjected, disconnect]
+    () => ({
+      account: isConnected ? address : null,
+      chainId,
+      wrongNetwork,
+      connectorName: connector?.name || '',
+      connectors: configured,
+      error,
+      notice,
+      busy: connecting || switching,
+      hasInjected,
+      modalOpen,
+      setModalOpen,
+      connectWith,
+      disconnect,
+      switchToSepolia,
+    }),
+    [address, isConnected, chainId, wrongNetwork, connector, configured, error, notice, connecting, switching, hasInjected, modalOpen, connectWith, disconnect, switchToSepolia]
   );
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

@@ -1,15 +1,12 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
 import { getNft, NFTS } from '../data.js';
 import { NftArt } from '../components/NftArt.jsx';
 import NftCard from '../components/NftCard.jsx';
-import { useWallet } from '../context/WalletContext.jsx';
+import { OnchainPanel } from '../components/OnchainPanel.jsx';
 
 export default function ItemDetail() {
   const { id } = useParams();
   const nft = getNft(id);
-  const { account, setModalOpen } = useWallet();
-  const [status, setStatus] = useState('');
 
   if (!nft) {
     return (
@@ -23,15 +20,6 @@ export default function ItemDetail() {
   }
 
   const more = NFTS.filter((n) => n.collection === nft.collection && n.id !== nft.id).slice(0, 3);
-
-  const buy = () => {
-    if (!account) return setModalOpen(true);
-    setStatus('Purchase flow is not connected to a contract in this build. Nothing was sent.');
-  };
-  const offer = () => {
-    if (!account) return setModalOpen(true);
-    setStatus('Offers need the marketplace contract, which is not deployed in this build. Nothing was sent.');
-  };
 
   return (
     <main className="section">
@@ -49,15 +37,9 @@ export default function ItemDetail() {
             Created by <Link to={`/creator/${nft.creator}`}>{nft.creator}</Link> · Royalty {nft.royalty}% · {nft.chain}
           </p>
           <div className="glass price-box">
-            <span className="muted small">Current price</span>
+            <span className="muted small">Placeholder price (sample data)</span>
             <div className="price big">{nft.price} ETH</div>
-            <div className="hero-cta">
-              <button className="btn btn-primary btn-lg" onClick={buy} disabled={!nft.listed}>
-                {nft.listed ? 'Buy now' : 'Not listed'}
-              </button>
-              <button className="btn btn-ghost btn-lg" onClick={offer}>Make offer</button>
-            </div>
-            {status && <p className="notice small" role="status">{status}</p>}
+            <OnchainPanel nft={nft} />
           </div>
           <p>{nft.description}</p>
 

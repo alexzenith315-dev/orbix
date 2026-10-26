@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useWallet } from '../context/WalletContext.jsx';
+import { MintButton } from '../components/MintButton.jsx';
+import { explorerTx } from '../web3/config.js';
 
 const STEPS = ['Upload', 'Metadata', 'Mint', 'Complete'];
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -10,6 +12,8 @@ export default function Create() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState('');
   const [error, setError] = useState('');
+  const [metadataUri, setMetadataUri] = useState('');
+  const [minted, setMinted] = useState(null);
   const [meta, setMeta] = useState({ name: '', description: '', category: 'Art', royalty: 5, traits: '' });
   const { account, setModalOpen } = useWallet();
 
@@ -92,24 +96,33 @@ export default function Create() {
 
       {step === 2 && (
         <div className="glass panel">
-          <h3>Mint on testnet</h3>
-          <p className="muted">
-            This build does not deploy or call an NFT contract, and metadata is not pinned to IPFS. Nothing here is minted on chain.
+          <h3>Mint on Sepolia</h3>
+          <p className="muted small">
+            Orbix does not upload files or pin metadata yet. Host your metadata JSON yourself (ipfs:// or https://) and paste its URI below.
+            The JSON draft for the metadata is shown on the previous step.
           </p>
+          <label className="field"><span>Metadata URI *</span>
+            <input value={metadataUri} placeholder="ipfs://… or https://…" onChange={(e) => setMetadataUri(e.target.value.trim())} />
+          </label>
           <p className="small">Wallet: {account ? <code>{account}</code> : 'not connected'}</p>
-          {!account && <button className="btn btn-ghost" onClick={() => setModalOpen(true)}>Connect wallet</button>}
           <div className="row between">
             <button className="btn btn-ghost" onClick={() => setStep(1)}>Back</button>
-            <button className="btn btn-primary" disabled title="Contract not deployed in this build" onClick={() => setStep(3)}>Mint (unavailable)</button>
+            <MintButton
+              royaltyPercent={meta.royalty}
+              metadataUri={metadataUri}
+              disabledReason="Enter a metadata URI (ipfs:// or https://) to mint."
+              onSuccess={(receipt) => { setMinted(receipt); setStep(3); }}
+            />
           </div>
         </div>
       )}
 
       {step === 3 && (
         <div className="glass panel">
-          <h3>Saved as a local draft</h3>
-          <p className="muted">Your draft exists only in this page session. It has not been published or minted.</p>
-          <button className="btn btn-primary" onClick={() => { setStep(0); setFile(null); setPreview(''); }}>Start another</button>
+          <h3>Minted on Sepolia</h3>
+          <p className="muted small">Confirmed on chain. Testnet only.</p>
+          {minted && <p className="small">Transaction: <a href={explorerTx(minted.transactionHash)} target="_blank" rel="noopener noreferrer">{minted.transactionHash.slice(0, 12)}…</a></p>}
+          <button className="btn btn-primary" onClick={() => { setStep(0); setFile(null); setPreview(''); setMetadataUri(''); setMinted(null); }}>Create another</button>
         </div>
       )}
     </main>
