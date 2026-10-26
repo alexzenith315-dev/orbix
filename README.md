@@ -1,6 +1,6 @@
 # Orbix
 
-Orbix is a dark, 3D-styled NFT marketplace frontend (React + Vite) with ERC-721 and marketplace contracts for Ethereum Sepolia testnet. Testnet only. Not audited. Not deployed yet.
+Orbix is a dark, 3D-styled NFT marketplace frontend (React + Vite) with ERC-721 and marketplace contracts for Ethereum Sepolia testnet. Testnet only. Not audited. Deployed to Ethereum Sepolia (testnet, see Deployed addresses below).
 
 ## Setup (frontend)
 
@@ -24,9 +24,19 @@ Vite only exposes variables that start with `VITE_`. Only public values go in th
 - Tests: `cd contracts && npm install && npm test` (15 tests, Hardhat).
 - ABIs are copied into `src/abi/` with `node scripts/export-abi.js` from `contracts/`. Re-run it after any contract change.
 
+## Deployed addresses (Ethereum Sepolia, chainId 11155111)
+
+- OrbixNFT: 0x4c0Da0aACF74d6D58B1F09dBAE77287aCD0089fb
+  https://sepolia.etherscan.io/address/0x4c0Da0aACF74d6D58B1F09dBAE77287aCD0089fb
+- OrbixMarketplace: 0x6ab97D118cEbCfA6eBCE4bF0B8e8306fb05BE017
+  https://sepolia.etherscan.io/address/0x6ab97D118cEbCfA6eBCE4bF0B8e8306fb05BE017
+- Deployer (testnet only): 0x9D9b3ac599160cD0701698D7Ec4d4154a56d4f46
+- Deploy txs: OrbixNFT https://sepolia.etherscan.io/tx/0xd4c8c615dee04317434cef6875599d9c443d4b053bfe02399efcfddf8b63e978 , OrbixMarketplace https://sepolia.etherscan.io/tx/0xe9c03bcc398a03690e93f331cb36e494c9e38a7f43921f715015c8315554cf60
+- Source: `contracts/deployments/sepolia.json`. The addresses are also the defaults in `src/web3/contracts.js`, so the frontend works without a local env file.
+
 ## Sepolia deploy prerequisites
 
-1. A deployer wallet used only for testnet. Never use a wallet that holds real funds.
+1. A deployer wallet used only for testnet. Never use a wallet that holds real funds. The deployer key in `contracts/.env` must be a throwaway testnet-only key: it is never committed, and any key that has ever been pasted into chat or logs should be treated as burned and replaced.
 2. Sepolia test ETH in that wallet. The deploy script refuses to run with a zero balance. Get test ETH from a Sepolia faucet (for example the Alchemy or Google Cloud Sepolia faucets; faucet limits and requirements change, so check their current rules). Two contract deployments need a small amount of test ETH for gas; fund it with a comfortable margin.
 3. `contracts/.env` (git-ignored) with:
    - `DEPLOYER_PRIVATE_KEY`: the deployer key (testnet only)
@@ -47,7 +57,7 @@ Check the deployer address and balance on https://sepolia.etherscan.io before de
 ## Honest limitations
 
 - Not audited. Do not use it with real funds.
-- Not deployed. Until the Sepolia deploy and the env addresses are set, buy, offer and mint show "contract not deployed yet" and send nothing.
+- Deployed to Sepolia testnet only. If the addresses are removed or empty, buy, offer and mint show "contract not deployed yet" and send nothing.
 - Placeholder art and sample data: all NFTs, collections, creators, prices and activity in `src/data.js` are sample data, not on-chain data. The detail page shows the on-chain owner and listing only when contracts are configured.
 - No IPFS pinning or upload service. Mint needs a metadata URI (ipfs:// or https://) that you host yourself. The Create page does not upload files.
 - No indexer or backend. Listings are read by scanning the marketplace contract (capped at 200 listings).

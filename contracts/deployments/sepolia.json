@@ -1,0 +1,12 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployedAt": "2026-10-26T18:49:04.668Z",
+  "OrbixNFT": "0x4c0Da0aACF74d6D58B1F09dBAE77287aCD0089fb",
+  "OrbixMarketplace": "0x6ab97D118cEbCfA6eBCE4bF0B8e8306fb05BE017",
+  "deployer": "0x9D9b3ac599160cD0701698D7Ec4d4154a56d4f46",
+  "txs": {
+    "OrbixNFT": "0xd4c8c615dee04317434cef6875599d9c443d4b053bfe02399efcfddf8b63e978",
+    "OrbixMarketplace": "0xe9c03bcc398a03690e93f331cb36e494c9e38a7f43921f715015c8315554cf60"
+  }
+}
