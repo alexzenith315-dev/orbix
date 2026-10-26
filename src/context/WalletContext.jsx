@@ -18,11 +18,6 @@ export function WalletProvider({ children }) {
   const wrongNetwork = isConnected && chainId !== ORBIX_CHAIN.id;
   const hasInjected = typeof window !== 'undefined' && !!window.ethereum;
 
-  // Close the modal once a wallet is connected on Sepolia.
-  useEffect(() => {
-    if (isConnected && !wrongNetwork) setModalOpen(false);
-  }, [isConnected, wrongNetwork]);
-
   // Tell the user when the connected account or network changes underneath them.
   useEffect(() => {
     if (!isConnected) return;

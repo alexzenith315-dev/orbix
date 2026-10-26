@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import { useWallet } from '../context/WalletContext.jsx';
+import { useSession } from '../context/SessionContext.jsx';
 import { WALLETCONNECT_PROJECT_ID } from '../web3/config.js';
 
 export default function WalletModal() {
-  const { modalOpen, setModalOpen, connectWith, connectors, busy, error, hasInjected } = useWallet();
+  const { modalOpen, setModalOpen, connectWith, connectors, busy, error, hasInjected, account, wrongNetwork, switchToSepolia } = useWallet();
+  const session = useSession();
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -11,6 +13,11 @@ export default function WalletModal() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [modalOpen, setModalOpen]);
+
+  // Close automatically once the wallet is connected on Sepolia AND the API session is signed in.
+  useEffect(() => {
+    if (account && !wrongNetwork && session.status === 'signed_in') setModalOpen(false);
+  }, [account, wrongNetwork, session.status, setModalOpen]);
 
   if (!modalOpen) return null;
 
@@ -32,6 +39,8 @@ export default function WalletModal() {
     });
   }
 
+  const showSignIn = account && !wrongNetwork;
+
   return (
     <div className="modal-backdrop" onClick={() => setModalOpen(false)}>
       <div
@@ -42,36 +51,68 @@ export default function WalletModal() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-head">
-          <h2 id="wallet-title">Connect a wallet</h2>
+          <h2 id="wallet-title">{showSignIn ? 'Sign in to Orbix' : 'Connect a wallet'}</h2>
           <button className="icon-btn" aria-label="Close" onClick={() => setModalOpen(false)}>
             ×
           </button>
         </div>
-        <p className="muted small">
-          Orbix never asks for your seed phrase. Approve the connection in your wallet only. Orbix runs on
-          Ethereum Sepolia testnet only.
-        </p>
-        <ul className="wallet-list">
-          {rows.map((r) => (
-            <li key={r.key}>
-              <button
-                className="wallet-item"
-                disabled={r.disabled || !r.connector}
-                onClick={() => r.connector && connectWith(r.connector)}
-              >
-                <span className="wallet-dot" aria-hidden="true" />
-                <span>
-                  <strong>{r.name}</strong>
-                  <small>{r.note}</small>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        {!hasInjected && (
-          <p className="notice small">No browser wallet detected. Install one, or use WalletConnect when it is enabled.</p>
+
+        {!account && (
+          <>
+            <p className="muted small">
+              Orbix never asks for your seed phrase. Approve the connection in your wallet only. Orbix runs on
+              Ethereum Sepolia testnet only.
+            </p>
+            <ul className="wallet-list">
+              {rows.map((r) => (
+                <li key={r.key}>
+                  <button
+                    className="wallet-item"
+                    disabled={r.disabled || !r.connector}
+                    onClick={() => r.connector && connectWith(r.connector)}
+                  >
+                    <span className="wallet-dot" aria-hidden="true" />
+                    <span>
+                      <strong>{r.name}</strong>
+                      <small>{r.note}</small>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {!hasInjected && (
+              <p className="notice small">No browser wallet detected. Install one, or use WalletConnect when it is enabled.</p>
+            )}
+          </>
         )}
+
+        {account && wrongNetwork && (
+          <div>
+            <p className="notice small">Your wallet is on an unsupported network. Orbix only works on Ethereum Sepolia.</p>
+            <button className="btn btn-primary" onClick={switchToSepolia} disabled={busy}>
+              Switch to Sepolia
+            </button>
+          </div>
+        )}
+
+        {showSignIn && (
+          <div>
+            <p className="muted small">
+              Signing in proves you control this address with a free message signature. It sends no transaction and
+              costs no gas.
+            </p>
+            <p className="tiny muted">Connected: {account.slice(0, 6)}…{account.slice(-4)}</p>
+            <button className="btn btn-primary" onClick={session.signIn} disabled={session.busy || session.status === 'loading'}>
+              {session.busy ? 'Waiting for signature…' : 'Sign in with wallet'}
+            </button>
+            {session.status === 'unreachable' && (
+              <p className="error small" role="alert">Can't reach the Orbix API right now. You can still browse the marketplace.</p>
+            )}
+          </div>
+        )}
+
         {error && <p className="error small" role="alert">{error}</p>}
+        {session.error && <p className="error small" role="alert">{session.error}</p>}
       </div>
     </div>
   );

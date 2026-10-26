@@ -53,8 +53,9 @@ api.get('/me', wrap(async (req, res) => {
 // --- collector dashboard, favorites, follows, activity (all from DB) ---
 api.get('/dashboard', requireAuth, wrap(async (req, res) => {
   const address = req.user.wallet?.address ?? null;
-  const [favorites, following, followers, purchases, listings, offers, ownedCount] = await Promise.all([
+  const [favorites, followingRows, following, followers, purchases, listings, offers, ownedCount] = await Promise.all([
     prisma.favorite.findMany({ where: { userId: req.user.id }, include: { nftAsset: { include: { metadata: true } } }, orderBy: { createdAt: 'desc' }, take: 100 }),
+    prisma.follow.findMany({ where: { followerId: req.user.id }, select: { followingId: true }, take: 500 }),
     prisma.follow.count({ where: { followerId: req.user.id } }),
     prisma.follow.count({ where: { followingId: req.user.id } }),
     address ? prisma.activityEvent.findMany({ where: { eventName: 'purchased', actor: address }, orderBy: { blockNumber: 'desc' }, take: 50 }) : [],
@@ -70,7 +71,8 @@ api.get('/dashboard', requireAuth, wrap(async (req, res) => {
     listings: { items: listings, source: 'indexed Listed events' },
     offersMade: { items: offers, source: 'indexed OfferMade events' },
     favorites: favorites.map((f) => ({ id: f.id, asset: f.nftAsset.id, tokenId: f.nftAsset.tokenId, contractAddress: f.nftAsset.contractAddress, placeholderArt: f.nftAsset.metadata?.isPlaceholder ?? true, name: f.nftAsset.metadata?.name ?? null })),
-    social: { following, followers },
+    favoriteAssetIds: favorites.map((f) => f.nftAsset.id),
+    social: { following, followers, followingIds: followingRows.map((r) => r.followingId) },
   }));
 }));
 
@@ -132,6 +134,24 @@ api.get('/launchpad', wrap(async (_req, res) => {
   const rows = await prisma.launchpadProject.findMany({ where: { status: 'PUBLISHED' }, orderBy: { launchAt: 'asc' } });
   const items = await Promise.all(rows.map(async (p) => publicProject(p, await mintedFor(p))));
   res.json({ states: LAUNCH_STATES, items });
+}));
+
+// Role-scoped application list for the studio view. Creators see their own projects; moderators and above see all.
+api.get('/launchpad/applications', requireAuth, wrap(async (req, res) => {
+  if (!hasRole(req.user.role, 'MODERATOR') && !hasRole(req.user.role, 'CREATOR')) {
+    return res.status(403).json({ error: 'forbidden', required: 'CREATOR' });
+  }
+  const where = hasRole(req.user.role, 'MODERATOR') ? {} : { creatorId: req.user.id };
+  const rows = await prisma.launchpadProject.findMany({ where, orderBy: { updatedAt: 'desc' }, take: 100 });
+  res.json({ items: rows.map((p) => dropDecimal(p)), scope: hasRole(req.user.role, 'MODERATOR') ? 'all' : 'own' });
+}));
+
+api.get('/creators/:handle', wrap(async (req, res) => {
+  const profile = await prisma.creatorProfile.findUnique({ where: { handle: req.params.handle }, include: { user: { select: { id: true } } } });
+  if (!profile) return res.status(404).json({ error: 'not_found' });
+  const followers = await prisma.follow.count({ where: { followingId: profile.user.id } });
+  // verified is set only by administrators in the database; it is read here, never derived from the request.
+  res.json({ userId: profile.user.id, handle: profile.handle, displayName: profile.displayName, verified: profile.verified, followers });
 }));
 
 api.get('/launchpad/:slug', wrap(async (req, res) => {

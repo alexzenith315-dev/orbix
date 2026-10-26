@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { NFTS, COLLECTIONS, CREATORS } from '../data.js';
 import { NftArt } from '../components/NftArt.jsx';
 import NftCard from '../components/NftCard.jsx';
+import ActivityFeed from '../components/ActivityFeed.jsx';
 
 export default function Home() {
   const featured = NFTS.slice(0, 3);

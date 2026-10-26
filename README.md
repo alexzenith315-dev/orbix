@@ -88,3 +88,13 @@ The current deploy at Render (`orbix-6q0g.onrender.com`) runs the frontend only,
 - OrbixNFT: 0x4c0Da0aACF74d6D58B1F09dBAE77287aCD0089fb (https://sepolia.etherscan.io/address/0x4c0Da0aACF74d6D58B1F09dBAE77287aCD0089fb)
 - OrbixMarketplace: 0x6ab97D118cEbCfA6eBCE4bF0B8e8306fb05BE017 (https://sepolia.etherscan.io/address/0x6ab97D118cEbCfA6eBCE4bF0B8e8306fb05BE017)
 - Source: `contracts/deployments/sepolia.json`. Contract deploy prerequisites and the contract test suite are in `contracts/`.
+
+## API wiring (frontend)
+
+The frontend calls the Orbix API through `src/api/client.js`. Set `VITE_API_URL` to the API origin
+(for example `https://orbix-6q0g.onrender.com`). Leave it empty when the page and API share an origin.
+Requests send cookies (`credentials: 'include'`), so the API's CORS origin must include the frontend origin.
+
+Render notes: the web service serves `dist` and `/api` from one process, so leave `VITE_API_URL` empty
+at build time. Set `DATABASE_URL` (pooler, port 6543, `?pgbouncer=true`) and `DIRECT_URL` (port 5432) in
+the Render environment. Never commit them.
