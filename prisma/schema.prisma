@@ -1,0 +1,352 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  CREATOR
+  MODERATOR
+  ADMINISTRATOR
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
+enum OfferStatus {
+  ACTIVE
+  ACCEPTED
+  CANCELLED
+  EXPIRED
+}
+
+enum TxKind {
+  MINT
+  LIST
+  CANCEL_LIST
+  BUY
+  OFFER
+  CANCEL_OFFER
+  ACCEPT_OFFER
+}
+
+enum TxStatus {
+  PENDING
+  CONFIRMED
+  REVERTED
+}
+
+enum Provenance {
+  CHAIN_EVENT
+  USER_SUBMITTED
+  EXTERNAL_API
+  PLACEHOLDER
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  PUBLISHED
+}
+
+model User {
+  id             String          @id @default(cuid())
+  role           Role            @default(USER)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  wallet         Wallet?
+  creatorProfile CreatorProfile?
+  sessions       Session[]
+  favorites      Favorite[]
+  following      Follow[]        @relation("follower")
+  followers      Follow[]        @relation("following")
+  notifications  Notification[]
+  collections    Collection[]
+  launchProjects LaunchpadProject[]
+  auditLogs      AuditLog[]
+}
+
+model Wallet {
+  id            String    @id @default(cuid())
+  address       String    @unique
+  chainId       Int
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastSignInAt  DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([chainId])
+}
+
+model CreatorProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  handle      String   @unique
+  displayName String
+  bio         String?
+  // Platform verification badge. Separate from wallet ownership; set only by administrators.
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model SiweNonce {
+  id         String    @id @default(cuid())
+  nonce      String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+model Collection {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  description     String?
+  creatorId       String
+  creator         User     @relation(fields: [creatorId], references: [id])
+  chainId         Int
+  // Null means off-chain collection page only. Not a deployed contract.
+  contractAddress String?
+  // Platform-verified flag, set by administrators only.
+  verified        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  assets          NFTAsset[]
+  projects        LaunchpadProject[]
+
+  @@index([contractAddress])
+}
+
+model NFTMetadata {
+  id          String     @id @default(cuid())
+  uri         String?
+  name        String
+  description String?
+  imageUrl    String?
+  // Placeholder art must be labeled as such in the API and UI.
+  isPlaceholder Boolean  @default(false)
+  attributes  Json?
+  provenance  Provenance @default(USER_SUBMITTED)
+  fetchedAt   DateTime?
+  assets      NFTAsset[]
+}
+
+model NFTAsset {
+  id              String    @id @default(cuid())
+  chainId         Int
+  contractAddress String
+  tokenId         String
+  ownerAddress    String?
+  creatorAddress  String?
+  collectionId   String?
+  collection     Collection? @relation(fields: [collectionId], references: [id])
+  metadataId     String?
+  metadata       NFTMetadata? @relation(fields: [metadataId], references: [id])
+  listings       MarketplaceListing[]
+  offers         Offer[]
+  favorites      Favorite[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([chainId, contractAddress, tokenId])
+  @@index([ownerAddress])
+  @@index([collectionId])
+}
+
+model MarketplaceListing {
+  id            String        @id @default(cuid())
+  chainId       Int
+  listingId     String
+  seller        String
+  priceWei      String
+  status        ListingStatus @default(ACTIVE)
+  nftAssetId    String?
+  nftAsset      NFTAsset?     @relation(fields: [nftAssetId], references: [id])
+  createdTxHash String?
+  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime      @default(now())
+
+  @@unique([chainId, listingId])
+  @@index([status])
+}
+
+model Offer {
+  id          String      @id @default(cuid())
+  chainId     Int
+  offerId     String
+  buyer       String
+  amountWei   String
+  expiresAt   DateTime
+  status      OfferStatus @default(ACTIVE)
+  nftAssetId  String?
+  nftAsset    NFTAsset?   @relation(fields: [nftAssetId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([chainId, offerId])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nftAssetId String
+  nftAsset   NFTAsset @relation(fields: [nftAssetId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, nftAssetId])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model TransactionRecord {
+  id          String   @id @default(cuid())
+  chainId     Int
+  txHash      String
+  kind        TxKind
+  status      TxStatus @default(PENDING)
+  actor       String
+  blockNumber BigInt?
+  // Only written from a verified receipt. Null until confirmed.
+  amountWei   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([chainId, txHash, kind])
+  @@index([actor])
+}
+
+model ActivityEvent {
+  id          String   @id @default(cuid())
+  chainId     Int
+  txHash      String
+  logIndex    Int
+  blockNumber BigInt
+  blockHash   String
+  eventName   String
+  actor       String?
+  contractAddress String
+  data        Json
+  createdAt   DateTime @default(now())
+
+  @@unique([chainId, txHash, logIndex])
+  @@index([blockNumber])
+  @@index([actor])
+}
+
+model IndexedBlock {
+  chainId     Int
+  blockNumber BigInt
+  blockHash   String
+
+  @@id([chainId, blockNumber])
+}
+
+model IndexerCursor {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  chainId         Int
+  contractAddress String
+  lastBlock       BigInt   @default(0)
+  updatedAt       DateTime @updatedAt
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model PlatformConfiguration {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+model LaunchpadProject {
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  name           String
+  description    String
+  teamName       String
+  creatorId      String
+  creator        User              @relation(fields: [creatorId], references: [id])
+  chainId        Int
+  mintPriceWei   String
+  supply         Int
+  launchAt       DateTime
+  endAt          DateTime
+  cancelledAt    DateTime?
+  riskDisclosure String
+  officialLinks  Json?
+  artworkUrl     String?
+  artworkIsPlaceholder Boolean     @default(true)
+  contractAddress String?
+  collectionId   String?
+  collection     Collection?       @relation(fields: [collectionId], references: [id])
+  status         ApplicationStatus @default(DRAFT)
+  submittedAt    DateTime?
+  reviewedById   String?
+  approvedAt     DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([status])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  target    String
+  metadata  Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([createdAt])
+}
