@@ -85,8 +85,8 @@ The current deploy at Render (`orbix-6q0g.onrender.com`) runs the frontend only,
 
 ## Contracts and deployed addresses (Ethereum Sepolia, chainId 11155111)
 
-- OrbixNFT: 0x4c0Da0aACF74d6D58B1F09dBAE77287aCD0089fb (https://sepolia.etherscan.io/address/0x4c0Da0aACF74d6D58B1F09dBAE77287aCD0089fb)
-- OrbixMarketplace: 0x6ab97D118cEbCfA6eBCE4bF0B8e8306fb05BE017 (https://sepolia.etherscan.io/address/0x6ab97D118cEbCfA6eBCE4bF0B8e8306fb05BE017)
+- OrbixNFT: 0x046605a3a77e7645c4160a2Ab03b90127Ef45500 (https://sepolia.etherscan.io/address/0x046605a3a77e7645c4160a2Ab03b90127Ef45500)
+- OrbixMarketplace: 0x1114225702ed905Cb6bc2A74882EAFE702e0F53A (https://sepolia.etherscan.io/address/0x1114225702ed905Cb6bc2A74882EAFE702e0F53A)
 - Source: `contracts/deployments/sepolia.json`. Contract deploy prerequisites and the contract test suite are in `contracts/`.
 
 ## API wiring (frontend)

@@ -14,6 +14,8 @@ import Launchpad from './pages/Launchpad.jsx';
 import LaunchpadDetail from './pages/LaunchpadDetail.jsx';
 import Studio from './pages/Studio.jsx';
 import Review from './pages/Review.jsx';
+import CreateToken from './pages/CreateToken.jsx';
+import TokenPage from './pages/Token.jsx';
 
 function NotFound() {
   return (
@@ -46,6 +48,8 @@ export default function App() {
               <Route path="/launchpad/:slug" element={<LaunchpadDetail />} />
               <Route path="/studio" element={<Studio />} />
               <Route path="/review" element={<Review />} />
+              <Route path="/create-token" element={<CreateToken />} />
+              <Route path="/token/:address" element={<TokenPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>

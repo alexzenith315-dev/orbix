@@ -18,8 +18,10 @@ export const config = {
   nonceTtlMinutes: int('NONCE_TTL_MINUTES', 5),
   chainId: int('ORBIX_CHAIN_ID', 11155111),
   rpcUrl: process.env.INDEXER_RPC_URL || process.env.VITE_SEPOLIA_RPC_URL || '',
-  nftAddress: process.env.VITE_ORBIX_NFT_ADDRESS || '0x4c0Da0aACF74d6D58B1F09dBAE77287aCD0089fb',
-  marketplaceAddress: process.env.VITE_ORBIX_MARKETPLACE_ADDRESS || '0x6ab97D118cEbCfA6eBCE4bF0B8e8306fb05BE017',
+  tokenFactoryAddress: process.env.VITE_ORBIX_TOKEN_FACTORY_ADDRESS || '0x34D01E1F470f12a9B3EBb3AA2123296A23274cF5',
+  pairingAddress: process.env.VITE_ORBIX_PAIRING_ADDRESS || '0x973382A07966EA347bFE54932D50b633834BDd7E',
+  nftAddress: process.env.VITE_ORBIX_NFT_ADDRESS || '0x046605a3a77e7645c4160a2Ab03b90127Ef45500',
+  marketplaceAddress: process.env.VITE_ORBIX_MARKETPLACE_ADDRESS || '0x1114225702ed905Cb6bc2A74882EAFE702e0F53A',
   indexerStartBlock: int('INDEXER_START_BLOCK', 0),
   indexerBatchSize: int('INDEXER_BATCH_SIZE', 500),
   // Blocks to wait before treating an event as final. Reorgs deeper than this are not expected on Sepolia but are still checked.

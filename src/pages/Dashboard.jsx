@@ -1,3 +1,5 @@
+import { useReadContract } from 'wagmi';
+import { TOKEN_FACTORY_ABI, TOKEN_FACTORY_ADDRESS, tokenFactoryDeployed } from '../web3/contracts.js';
 import { Link } from 'react-router-dom';
 import { useApi, ErrorNote } from '../api/useApi.jsx';
 import { useSession } from '../context/SessionContext.jsx';
@@ -10,6 +12,31 @@ function Section({ title, note, children }) {
       {note && <p className="muted small">{note}</p>}
       {children}
     </section>
+  );
+}
+
+
+function CreatedTokens({ account }) {
+  const list = useReadContract({
+    address: TOKEN_FACTORY_ADDRESS,
+    abi: TOKEN_FACTORY_ABI,
+    functionName: 'tokensByCreator',
+    args: [account],
+    query: { enabled: tokenFactoryDeployed && !!account },
+  });
+  const tokens = list.data || [];
+  return (
+    <Section title="Your tokens" note="Created through OrbixTokenFactory on Sepolia.">
+      {!tokenFactoryDeployed ? <Empty>Token factory not deployed.</Empty> : tokens.length === 0 ? (
+        <Empty>No tokens yet. <Link to="/create-token">Create one</Link>.</Empty>
+      ) : (
+        <ul className="plain-list">
+          {tokens.map((t) => (
+            <li key={t}><Link to={`/token/${t}`}>{t.slice(0, 10)}…{t.slice(-6)}</Link></li>
+          ))}
+        </ul>
+      )}
+    </Section>
   );
 }
 
@@ -63,6 +90,7 @@ export default function Dashboard() {
         <p className="muted small">{session.user?.address ? `${session.user.address.slice(0, 6)}…${session.user.address.slice(-4)}` : 'No wallet linked'} · Ethereum Sepolia testnet</p>
       </div>
       <div className="dash-grid">
+        <CreatedTokens account={session.user?.address} />
         <Section title="Owned" note={d.owned?.source}>
           {ownedCount === 0 ? <Empty>No owned NFTs found in the indexed chain data yet.</Empty> : <p>{ownedCount} owned.</p>}
         </Section>

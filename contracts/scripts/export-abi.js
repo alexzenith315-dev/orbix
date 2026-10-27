@@ -5,7 +5,7 @@ const path = require("path");
 const root = path.join(__dirname, "..");
 const out = path.join(root, "..", "src", "abi");
 fs.mkdirSync(out, { recursive: true });
-for (const name of ["OrbixNFT", "OrbixMarketplace"]) {
+for (const name of ["OrbixNFT", "OrbixMarketplace", "OrbixTokenFactory", "OrbixPairing", "OrbixToken"]) {
   const artifact = JSON.parse(fs.readFileSync(path.join(root, "artifacts", "contracts", `${name}.sol`, `${name}.json`), "utf8"));
   fs.writeFileSync(path.join(out, `${name}.json`), JSON.stringify(artifact.abi, null, 2) + "\n");
   console.log(`wrote src/abi/${name}.json (${artifact.abi.length} entries)`);

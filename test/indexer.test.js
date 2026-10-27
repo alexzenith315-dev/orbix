@@ -9,7 +9,7 @@ const topics = encodeEventTopics({ abi: [soldEvent], eventName: 'Sold', args: { 
 const data = encodeAbiParameters(soldEvent.inputs.filter((i) => !i.indexed), [10n, 1n, 0n]);
 
 const log = {
-  address: '0x6ab97D118cEbCfA6eBCE4bF0B8e8306fb05BE017',
+  address: '0x1114225702ed905Cb6bc2A74882EAFE702e0F53A',
   topics, data,
   transactionHash: '0x' + 'ab'.repeat(32),
   logIndex: 3, blockNumber: 100n, blockHash: '0x' + '11'.repeat(32),
