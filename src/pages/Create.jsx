@@ -15,7 +15,7 @@ export default function Create() {
   const [metadataUri, setMetadataUri] = useState('');
   const [minted, setMinted] = useState(null);
   const [meta, setMeta] = useState({ name: '', description: '', category: 'Art', royalty: 5, traits: '' });
-  const { account, setModalOpen } = useWallet();
+  const { account, setModalOpen, chainLabel, chainKey } = useWallet();
 
   const pick = (f) => {
     setError('');
@@ -96,7 +96,7 @@ export default function Create() {
 
       {step === 2 && (
         <div className="glass panel">
-          <h3>Mint on Sepolia</h3>
+          <h3>Mint on {chainLabel}</h3>
           <p className="muted small">
             Orbix does not upload files or pin metadata yet. Host your metadata JSON yourself (ipfs:// or https://) and paste its URI below.
             The JSON draft for the metadata is shown on the previous step.
@@ -119,9 +119,9 @@ export default function Create() {
 
       {step === 3 && (
         <div className="glass panel">
-          <h3>Minted on Sepolia</h3>
+          <h3>Minted on {chainLabel}</h3>
           <p className="muted small">Confirmed on chain. Testnet only.</p>
-          {minted && <p className="small">Transaction: <a href={explorerTx(minted.transactionHash)} target="_blank" rel="noopener noreferrer">{minted.transactionHash.slice(0, 12)}…</a></p>}
+          {minted && <p className="small">Transaction: <a href={explorerTx(minted.transactionHash, chainKey)} target="_blank" rel="noopener noreferrer">{minted.transactionHash.slice(0, 12)}…</a></p>}
           <button className="btn btn-primary" onClick={() => { setStep(0); setFile(null); setPreview(''); setMetadataUri(''); setMinted(null); }}>Create another</button>
         </div>
       )}

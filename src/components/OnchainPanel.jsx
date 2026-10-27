@@ -2,16 +2,7 @@ import { useEffect, useState } from 'react';
 import { useConfig, useReadContract } from 'wagmi';
 import { readContracts } from 'wagmi/actions';
 import { formatEther, parseEther } from 'viem';
-import {
-  MARKETPLACE_ABI,
-  MARKETPLACE_ADDRESS,
-  NFT_ABI,
-  NFT_ADDRESS,
-  NOT_DEPLOYED_LABEL,
-  PLATFORM_FEE_BPS,
-  marketplaceDeployed,
-  nftDeployed,
-} from '../web3/contracts.js';
+import { MARKETPLACE_ABI, NFT_ABI, NOT_DEPLOYED_LABEL, PLATFORM_FEE_BPS } from '../web3/contracts.js';
 import { useContractTx } from '../web3/useContractTx.js';
 import { explorerAddress } from '../web3/config.js';
 import TxStatus from './TxStatus.jsx';
@@ -22,6 +13,8 @@ const MAX_LISTING_SCAN = 200;
 /** Reads active on-chain listings for one NFT contract + token. Returns { listingId, price } or null. */
 export function useOnchainListing(tokenId) {
   const config = useConfig();
+  const { contracts } = useWallet();
+  const { marketplaceDeployed, nftDeployed } = contracts;
   const [state, setState] = useState({ loading: false, listing: null, error: '' });
 
   useEffect(() => {
@@ -31,19 +24,19 @@ export function useOnchainListing(tokenId) {
       setState({ loading: true, listing: null, error: '' });
       try {
         const next = await readContracts(config, {
-          contracts: [{ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, functionName: 'nextListingId' }],
+          contracts: [{ address: contracts.marketplace, abi: MARKETPLACE_ABI, functionName: 'nextListingId' }],
         });
         const count = Math.min(Number(next[0].result) - 1, MAX_LISTING_SCAN);
         let found = null;
         if (count > 0) {
           const ids = Array.from({ length: count }, (_, i) => i + 1);
           const rows = await readContracts(config, {
-            contracts: ids.map((id) => ({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, functionName: 'listings', args: [BigInt(id)] })),
+            contracts: ids.map((id) => ({ address: contracts.marketplace, abi: MARKETPLACE_ABI, functionName: 'listings', args: [BigInt(id)] })),
           });
           rows.forEach((r, i) => {
             if (found || r.status !== 'success') return;
             const [seller, nft, tid, price, active] = r.result;
-            if (active && nft.toLowerCase() === NFT_ADDRESS.toLowerCase() && tid === BigInt(tokenId)) {
+            if (active && nft.toLowerCase() === contracts.nft.toLowerCase() && tid === BigInt(tokenId)) {
               found = { listingId: BigInt(ids[i]), price, seller };
             }
           });
@@ -56,7 +49,7 @@ export function useOnchainListing(tokenId) {
     return () => {
       cancelled = true;
     };
-  }, [config, tokenId]);
+  }, [config, tokenId, contracts]);
 
   return state;
 }
@@ -80,7 +73,8 @@ export function CostBreakdown({ priceEth, royaltyPct }) {
 
 /** Buy, offer and ownership wiring for an item detail page. Placeholder art; chain data only when deployed. */
 export function OnchainPanel({ nft }) {
-  const { account, setModalOpen, wrongNetwork, switchToSepolia } = useWallet();
+  const { account, setModalOpen, wrongNetwork, switchToActive, chainKey, chainLabel, contracts } = useWallet();
+  const { marketplaceDeployed, nftDeployed } = contracts;
   const tokenId = Number(nft.id);
   const listing = useOnchainListing(tokenId);
   const tx = useContractTx();
@@ -88,7 +82,7 @@ export function OnchainPanel({ nft }) {
   const [offerDays, setOfferDays] = useState(7);
 
   const owner = useReadContract({
-    address: NFT_ADDRESS,
+    address: contracts.nft,
     abi: NFT_ABI,
     functionName: 'ownerOf',
     args: [BigInt(tokenId)],
@@ -104,7 +98,7 @@ export function OnchainPanel({ nft }) {
     if (!account) return setModalOpen(true);
     if (!listing.listing) return;
     await tx.run({
-      address: MARKETPLACE_ADDRESS,
+      address: contracts.marketplace,
       abi: MARKETPLACE_ABI,
       functionName: 'buy',
       args: [listing.listing.listingId],
@@ -122,10 +116,10 @@ export function OnchainPanel({ nft }) {
     }
     if (value <= 0n) return;
     await tx.run({
-      address: MARKETPLACE_ADDRESS,
+      address: contracts.marketplace,
       abi: MARKETPLACE_ABI,
       functionName: 'makeOffer',
-      args: [NFT_ADDRESS, BigInt(tokenId), BigInt(Number(offerDays) * 24 * 3600)],
+      args: [contracts.nft, BigInt(tokenId), BigInt(Number(offerDays) * 24 * 3600)],
       value,
     });
   };
@@ -135,8 +129,8 @@ export function OnchainPanel({ nft }) {
       <p className="tiny muted">
         {nftDeployed ? (
           <>
-            Contract: <a href={explorerAddress(NFT_ADDRESS)} target="_blank" rel="noopener noreferrer">{NFT_ADDRESS.slice(0, 10)}…</a>{' '}
-            (Sepolia testnet)
+            Contract: <a href={explorerAddress(contracts.nft, chainKey)} target="_blank" rel="noopener noreferrer">{contracts.nft.slice(0, 10)}…</a>{' '}
+            ({chainLabel})
           </>
         ) : (
           NOT_DEPLOYED_LABEL
@@ -153,8 +147,8 @@ export function OnchainPanel({ nft }) {
 
       {blockedByNetwork && (
         <p className="notice small">
-          Wrong network. Switch to Ethereum Sepolia to transact.{' '}
-          <button className="btn btn-ghost btn-sm" onClick={switchToSepolia}>Switch to Sepolia</button>
+          Wrong network. Switch to {chainLabel} to transact.{' '}
+          <button className="btn btn-ghost btn-sm" onClick={switchToActive}>Switch to {chainLabel}</button>
         </p>
       )}
 

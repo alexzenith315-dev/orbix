@@ -3,17 +3,13 @@ import { Link } from 'react-router-dom';
 import { decodeEventLog, formatUnits } from 'viem';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useContractTx } from '../web3/useContractTx.js';
-import {
-  TOKEN_FACTORY_ABI,
-  TOKEN_FACTORY_ADDRESS,
-  tokenFactoryDeployed,
-  NOT_DEPLOYED_LABEL,
-} from '../web3/contracts.js';
+import { TOKEN_FACTORY_ABI, NOT_DEPLOYED_LABEL } from '../web3/contracts.js';
 import { explorerTx, explorerAddress } from '../web3/config.js';
 import TxStatus from '../components/TxStatus.jsx';
 
 export default function CreateToken() {
-  const { account, setModalOpen, wrongNetwork, switchToSepolia } = useWallet();
+  const { account, setModalOpen, wrongNetwork, switchToActive, chainKey, chainLabel, contracts } = useWallet();
+  const { tokenFactory: TOKEN_FACTORY_ADDRESS, tokenFactoryDeployed } = contracts;
   const tx = useContractTx();
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
@@ -86,11 +82,11 @@ export default function CreateToken() {
           {formError && <p className="error small">{formError}</p>}
           {account && wrongNetwork && (
             <p className="notice small">
-              Wrong network. <button type="button" className="btn btn-ghost btn-sm" onClick={switchToSepolia}>Switch to Sepolia</button>
+              Wrong network. <button type="button" className="btn btn-ghost btn-sm" onClick={switchToActive}>Switch to {chainLabel}</button>
             </p>
           )}
           <button type="submit" className="btn btn-primary" disabled={busy || (account && wrongNetwork)}>
-            {account ? 'Create token on Sepolia' : 'Connect wallet to create'}
+            {account ? `Create token on ${chainLabel}` : 'Connect wallet to create'}
           </button>
           <TxStatus phase={tx.phase} hash={tx.hash} error={tx.error} />
         </form>
@@ -103,11 +99,11 @@ export default function CreateToken() {
             <li>Total supply: {formatUnits(result.maxSupply, 18)}</li>
             <li>To you (creator): {formatUnits(result.creatorAllocation, 18)} (95%)</li>
             <li>To platform: {formatUnits(result.platformAllocation, 18)} (5%)</li>
-            <li>Token address: <a href={explorerAddress(result.token)} target="_blank" rel="noreferrer">{result.token}</a></li>
+            <li>Token address: <a href={explorerAddress(result.token, chainKey)} target="_blank" rel="noreferrer">{result.token}</a></li>
           </ul>
           <p className="small">
             <Link to={`/token/${result.token}`} className="btn btn-ghost btn-sm">Open token and pairing</Link>{' '}
-            <a href={explorerTx(tx.hash)} target="_blank" rel="noreferrer">View transaction</a>
+            <a href={explorerTx(tx.hash, chainKey)} target="_blank" rel="noreferrer">View transaction</a>
           </p>
         </div>
       )}

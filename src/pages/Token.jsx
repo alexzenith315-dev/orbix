@@ -4,15 +4,7 @@ import { useReadContract, useReadContracts, useConfig } from 'wagmi';
 import { formatUnits, parseUnits, parseEventLogs, isAddress } from 'viem';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useContractTx } from '../web3/useContractTx.js';
-import {
-  TOKEN_ABI,
-  PAIRING_ABI,
-  PAIRING_ADDRESS,
-  pairingDeployed,
-  NFT_ABI,
-  nftDeployed,
-  NOT_DEPLOYED_LABEL,
-} from '../web3/contracts.js';
+import { TOKEN_ABI, PAIRING_ABI, NFT_ABI, NOT_DEPLOYED_LABEL } from '../web3/contracts.js';
 import { explorerAddress, explorerTx } from '../web3/config.js';
 import TxStatus from '../components/TxStatus.jsx';
 
@@ -40,6 +32,8 @@ function useSteps() {
 }
 
 function Redeem({ token, decimals, account, setModalOpen, blocked }) {
+  const { contracts } = useWallet();
+  const { pairing: PAIRING_ADDRESS, pairingDeployed, nftDeployed } = contracts;
   const { tx, run, busy, stage } = useSteps();
   const [nft, setNft] = useState('');
   const [tokenId, setTokenId] = useState('');
@@ -105,20 +99,22 @@ function Redeem({ token, decimals, account, setModalOpen, blocked }) {
       {received !== null && (
         <p className="small">
           You received {formatUnits(received, decimals ?? 18)} tokens. The NFT is now locked in the pairing contract.{' '}
-          <a href={explorerTx(tx.hash)} target="_blank" rel="noreferrer">View transaction</a>
+          <a href={explorerTx(tx.hash, chainKey)} target="_blank" rel="noreferrer">View transaction</a>
         </p>
       )}
     </section>
   );
 }
 
-function Pairing({ token, account, setModalOpen, isCreator, decimals, blocked, switchToSepolia }) {
+function Pairing({ token, account, setModalOpen, isCreator, decimals, blocked }) {
   const { tx, run, busy, stage } = useSteps();
   const [nft, setNft] = useState('');
   const [amount, setAmount] = useState('50000');
   const [fundAmount, setFundAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [formError, setFormError] = useState('');
+  const { contracts, switchToActive, chainLabel } = useWallet();
+  const { pairing: PAIRING_ADDRESS, pairingDeployed, nftDeployed } = contracts;
   const dec = decimals ?? 18;
   const notDeployed = !pairingDeployed || !nftDeployed;
 
@@ -218,7 +214,7 @@ function Pairing({ token, account, setModalOpen, isCreator, decimals, blocked, s
       {!isCreator && <p className="muted small">Only the token creator can set pairing and manage the reserve.</p>}
       {blocked && (
         <p className="notice small">
-          Wrong network. <button className="btn btn-ghost btn-sm" onClick={switchToSepolia}>Switch to Sepolia</button>
+          Wrong network. <button className="btn btn-ghost btn-sm" onClick={switchToActive}>Switch to {chainLabel}</button>
         </p>
       )}
       {formError && <p className="error small">{formError}</p>}
@@ -229,7 +225,7 @@ function Pairing({ token, account, setModalOpen, isCreator, decimals, blocked, s
 
 export default function TokenPage() {
   const { address: token } = useParams();
-  const { account, setModalOpen, wrongNetwork, switchToSepolia } = useWallet();
+  const { account, setModalOpen, wrongNetwork, chainKey } = useWallet();
   const validToken = isAddress(token || '');
   const blocked = !!account && wrongNetwork;
 
@@ -254,7 +250,7 @@ export default function TokenPage() {
     <main className="section narrow">
       <div className="section-head">
         <h1>{name ?? 'Token'} {symbol ? `(${symbol})` : ''}</h1>
-        <span className="muted small"><a href={explorerAddress(token)} target="_blank" rel="noreferrer">{token}</a></span>
+        <span className="muted small"><a href={explorerAddress(token, chainKey)} target="_blank" rel="noreferrer">{token}</a></span>
       </div>
       <p className="small muted">Creator: {creator ?? '…'} · <Link to="/create-token">Create a token</Link></p>
       <Pairing
@@ -264,7 +260,6 @@ export default function TokenPage() {
         isCreator={isCreator}
         decimals={decimals}
         blocked={blocked}
-        switchToSepolia={switchToSepolia}
       />
       <Redeem token={token} decimals={decimals} account={account} setModalOpen={setModalOpen} blocked={blocked} />
     </main>

@@ -1,4 +1,4 @@
-import { NFT_ABI, NFT_ADDRESS, NOT_DEPLOYED_LABEL, nftDeployed } from '../web3/contracts.js';
+import { NFT_ABI, NOT_DEPLOYED_LABEL } from '../web3/contracts.js';
 import { useContractTx } from '../web3/useContractTx.js';
 import { useWallet } from '../context/WalletContext.jsx';
 import TxStatus from '../components/TxStatus.jsx';
@@ -6,7 +6,8 @@ import TxStatus from '../components/TxStatus.jsx';
 // Mint is wired to OrbixNFT.mint(uri, royaltyBps). This build has no IPFS pinning, so the
 // token URI must be a metadata URI you host yourself (ipfs:// or https://).
 export function MintButton({ royaltyPercent, metadataUri, disabledReason, onSuccess }) {
-  const { account, setModalOpen, wrongNetwork, switchToSepolia } = useWallet();
+  const { account, setModalOpen, wrongNetwork, switchToActive, chainLabel, contracts } = useWallet();
+  const { nftDeployed } = contracts;
   const tx = useContractTx();
   const bps = Math.round(Number(royaltyPercent) * 100);
   const uriOk = /^(ipfs:\/\/|https:\/\/)\S+$/.test(metadataUri || '');
@@ -19,7 +20,7 @@ export function MintButton({ royaltyPercent, metadataUri, disabledReason, onSucc
 
   const mint = async () => {
     if (!account) return setModalOpen(true);
-    const receipt = await tx.run({ address: NFT_ADDRESS, abi: NFT_ABI, functionName: 'mint', args: [metadataUri, BigInt(bps)] });
+    const receipt = await tx.run({ address: contracts.nft, abi: NFT_ABI, functionName: 'mint', args: [metadataUri, BigInt(bps)] });
     if (receipt && onSuccess) onSuccess(receipt);
   };
 
@@ -29,12 +30,12 @@ export function MintButton({ royaltyPercent, metadataUri, disabledReason, onSucc
     <>
       {account && wrongNetwork && (
         <p className="notice small">
-          Wrong network. <button className="btn btn-ghost btn-sm" onClick={switchToSepolia}>Switch to Sepolia</button>
+          Wrong network. <button className="btn btn-ghost btn-sm" onClick={switchToActive}>Switch to {chainLabel}</button>
         </p>
       )}
       {!uriOk && <p className="tiny muted">{disabledReason || 'Enter a metadata URI (ipfs:// or https://) to mint.'}</p>}
       <button className="btn btn-primary" onClick={mint} disabled={!uriOk || busy || (account && wrongNetwork)}>
-        {account ? 'Mint on Sepolia' : 'Connect wallet to mint'}
+        {account ? `Mint on ${chainLabel}` : 'Connect wallet to mint'}
       </button>
       <TxStatus phase={tx.phase} hash={tx.hash} error={tx.error} />
     </>

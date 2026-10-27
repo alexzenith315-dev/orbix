@@ -1,5 +1,5 @@
 import { useReadContract } from 'wagmi';
-import { TOKEN_FACTORY_ABI, TOKEN_FACTORY_ADDRESS, tokenFactoryDeployed } from '../web3/contracts.js';
+import { TOKEN_FACTORY_ABI } from '../web3/contracts.js';
 import { Link } from 'react-router-dom';
 import { useApi, ErrorNote } from '../api/useApi.jsx';
 import { useSession } from '../context/SessionContext.jsx';
@@ -17,6 +17,8 @@ function Section({ title, note, children }) {
 
 
 function CreatedTokens({ account }) {
+  const { contracts, chainLabel } = useWallet();
+  const { tokenFactory: TOKEN_FACTORY_ADDRESS, tokenFactoryDeployed } = contracts;
   const list = useReadContract({
     address: TOKEN_FACTORY_ADDRESS,
     abi: TOKEN_FACTORY_ABI,
@@ -26,7 +28,7 @@ function CreatedTokens({ account }) {
   });
   const tokens = list.data || [];
   return (
-    <Section title="Your tokens" note="Created through OrbixTokenFactory on Sepolia.">
+    <Section title="Your tokens" note={`Created through OrbixTokenFactory on ${chainLabel}.`}>
       {!tokenFactoryDeployed ? <Empty>Token factory not deployed.</Empty> : tokens.length === 0 ? (
         <Empty>No tokens yet. <Link to="/create-token">Create one</Link>.</Empty>
       ) : (
@@ -46,7 +48,7 @@ function Empty({ children }) {
 
 export default function Dashboard() {
   const session = useSession();
-  const { setModalOpen } = useWallet();
+  const { setModalOpen, chainLabel } = useWallet();
   const signedIn = session.status === 'signed_in';
   const dash = useApi('/dashboard', { enabled: signedIn });
 
@@ -87,7 +89,7 @@ export default function Dashboard() {
     <main className="section dash">
       <div className="dash-head">
         <h1>Dashboard</h1>
-        <p className="muted small">{session.user?.address ? `${session.user.address.slice(0, 6)}…${session.user.address.slice(-4)}` : 'No wallet linked'} · Ethereum Sepolia testnet</p>
+        <p className="muted small">{session.user?.address ? `${session.user.address.slice(0, 6)}…${session.user.address.slice(-4)}` : 'No wallet linked'} · {chainLabel}</p>
       </div>
       <div className="dash-grid">
         <CreatedTokens account={session.user?.address} />

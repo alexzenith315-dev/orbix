@@ -4,7 +4,7 @@ import { useSession } from '../context/SessionContext.jsx';
 import { WALLETCONNECT_PROJECT_ID } from '../web3/config.js';
 
 export default function WalletModal() {
-  const { modalOpen, setModalOpen, connectWith, connectors, busy, error, hasInjected, account, wrongNetwork, switchToSepolia } = useWallet();
+  const { modalOpen, setModalOpen, connectWith, connectors, busy, error, hasInjected, account, wrongNetwork, switchToActive, chainLabel } = useWallet();
   const session = useSession();
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export default function WalletModal() {
     return () => window.removeEventListener('keydown', onKey);
   }, [modalOpen, setModalOpen]);
 
-  // Close automatically once the wallet is connected on Sepolia AND the API session is signed in.
+  // Close automatically once the wallet is connected on the selected chain AND the API session is signed in.
   useEffect(() => {
     if (account && !wrongNetwork && session.status === 'signed_in') setModalOpen(false);
   }, [account, wrongNetwork, session.status, setModalOpen]);
@@ -61,7 +61,7 @@ export default function WalletModal() {
           <>
             <p className="muted small">
               Orbix never asks for your seed phrase. Approve the connection in your wallet only. Orbix runs on
-              Ethereum Sepolia testnet only.
+              testnets only. Pick the chain in the header.
             </p>
             <ul className="wallet-list">
               {rows.map((r) => (
@@ -88,9 +88,9 @@ export default function WalletModal() {
 
         {account && wrongNetwork && (
           <div>
-            <p className="notice small">Your wallet is on an unsupported network. Orbix only works on Ethereum Sepolia.</p>
-            <button className="btn btn-primary" onClick={switchToSepolia} disabled={busy}>
-              Switch to Sepolia
+            <p className="notice small">Your wallet is on a network Orbix does not support. Switch to {chainLabel}.</p>
+            <button className="btn btn-primary" onClick={switchToActive} disabled={busy}>
+              Switch to {chainLabel}
             </button>
           </div>
         )}

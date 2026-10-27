@@ -2,6 +2,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useSession, hasRole } from '../context/SessionContext.jsx';
+import ChainSwitcher from './ChainSwitcher.jsx';
 
 export default function Navbar() {
   const { account, setModalOpen, disconnect } = useWallet();
@@ -47,6 +48,7 @@ export default function Navbar() {
           ))}
         </nav>
         <div className="nav-actions">
+          <ChainSwitcher />
           {session.status === 'signed_in' && account ? (
             <div className="user-menu" ref={menuRef}>
               <button className="btn btn-ghost" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((v) => !v)}>

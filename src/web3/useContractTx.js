@@ -1,24 +1,19 @@
 import { useCallback, useState } from 'react';
 import { useConfig, useWriteContract } from 'wagmi';
 import { waitForTransactionReceipt } from 'wagmi/actions';
-import { ORBIX_CHAIN } from './config.js';
+import { useWallet } from '../context/WalletContext.jsx';
+import { friendlyTxError } from './errors.js';
 
-function isRejection(e) {
-  const msg = `${e?.shortMessage || ''} ${e?.message || ''}`;
-  return e?.code === 4001 || /user (rejected|denied)|rejected the request|request rejected/i.test(msg);
-}
-
-export function friendlyTxError(e) {
-  if (isRejection(e)) return 'You rejected the request in your wallet. Nothing was sent.';
-  return e?.shortMessage || e?.message || 'Transaction failed.';
-}
+export { friendlyTxError };
 
 /**
- * Runs one contract write. Phases: idle -> wallet -> pending -> success | failed.
- * 'success' is only set after the receipt comes back with status "success" on Sepolia.
+ * Runs one contract write on the currently selected chain.
+ * Phases: idle -> wallet -> pending -> success | failed.
+ * 'success' is only set after the receipt comes back with status "success" on that chain.
  */
 export function useContractTx() {
   const config = useConfig();
+  const { chain } = useWallet();
   const { writeContractAsync } = useWriteContract();
   const [state, setState] = useState({ phase: 'idle', hash: '', error: '' });
 
@@ -27,14 +22,14 @@ export function useContractTx() {
       setState({ phase: 'wallet', hash: '', error: '' });
       let hash;
       try {
-        hash = await writeContractAsync({ ...params, chainId: ORBIX_CHAIN.id });
+        hash = await writeContractAsync({ ...params, chainId: chain.id });
       } catch (e) {
         setState({ phase: 'failed', hash: '', error: friendlyTxError(e) });
         return null;
       }
       setState({ phase: 'pending', hash, error: '' });
       try {
-        const receipt = await waitForTransactionReceipt(config, { hash, chainId: ORBIX_CHAIN.id, confirmations: 1 });
+        const receipt = await waitForTransactionReceipt(config, { hash, chainId: chain.id, confirmations: 1 });
         if (receipt.status === 'success') {
           setState({ phase: 'success', hash, error: '' });
           return receipt;
@@ -46,7 +41,7 @@ export function useContractTx() {
         return null;
       }
     },
-    [config, writeContractAsync]
+    [config, writeContractAsync, chain.id]
   );
 
   const reset = useCallback(() => setState({ phase: 'idle', hash: '', error: '' }), []);

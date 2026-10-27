@@ -3,19 +3,26 @@ import OrbixMarketplaceAbi from '../abi/OrbixMarketplace.json';
 import OrbixTokenFactoryAbi from '../abi/OrbixTokenFactory.json';
 import OrbixPairingAbi from '../abi/OrbixPairing.json';
 import OrbixTokenAbi from '../abi/OrbixToken.json';
+import { resolveContracts, EVM_CHAINS } from '../lib/chains/index.js';
 
-// Deployed addresses come from Vite env vars (see README). Empty means not deployed yet.
-// Sepolia deployments (public addresses, see README). Env vars override.
-export const NFT_ADDRESS = import.meta.env.VITE_ORBIX_NFT_ADDRESS || '0x046605a3a77e7645c4160a2Ab03b90127Ef45500';
-export const MARKETPLACE_ADDRESS = import.meta.env.VITE_ORBIX_MARKETPLACE_ADDRESS || '0x1114225702ed905Cb6bc2A74882EAFE702e0F53A';
-
+// Contract addresses are per chain (src/lib/chains/evm.js). Components read them from
+// useWallet().contracts, which follows the chain the user selected. Do not add module-level addresses here.
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
-export const nftDeployed = ADDRESS_RE.test(NFT_ADDRESS);
-export const marketplaceDeployed = ADDRESS_RE.test(MARKETPLACE_ADDRESS);
-export const TOKEN_FACTORY_ADDRESS = import.meta.env.VITE_ORBIX_TOKEN_FACTORY_ADDRESS || '0x34D01E1F470f12a9B3EBb3AA2123296A23274cF5';
-export const PAIRING_ADDRESS = import.meta.env.VITE_ORBIX_PAIRING_ADDRESS || '0x973382A07966EA347bFE54932D50b633834BDd7E';
-export const tokenFactoryDeployed = ADDRESS_RE.test(TOKEN_FACTORY_ADDRESS);
-export const pairingDeployed = ADDRESS_RE.test(PAIRING_ADDRESS);
+
+export function contractsFor(chainKey) {
+  const cfg = EVM_CHAINS[chainKey] || EVM_CHAINS.sepolia;
+  const c = resolveContracts(cfg);
+  return {
+    nft: c.nft,
+    marketplace: c.marketplace,
+    tokenFactory: c.tokenFactory,
+    pairing: c.pairing,
+    nftDeployed: ADDRESS_RE.test(c.nft),
+    marketplaceDeployed: ADDRESS_RE.test(c.marketplace),
+    tokenFactoryDeployed: ADDRESS_RE.test(c.tokenFactory),
+    pairingDeployed: ADDRESS_RE.test(c.pairing),
+  };
+}
 
 export const NOT_DEPLOYED_LABEL = 'contract not deployed yet';
 
